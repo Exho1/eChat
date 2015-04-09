@@ -1,6 +1,6 @@
 ----// eChat //----
 -- Author: Exho (obviously)
--- Version: 4/8/14
+-- Version: 4/9/14
 
 if SERVER then
 	AddCSLuaFile()
@@ -369,10 +369,6 @@ function chat.AddText(...)
 	eChat.chatLog:SetVisible( true )
 	eChat.lastMessage = CurTime()
 	oldAddText(unpack(msg))
-
-	-- Print the chat message to console like the regular function
-	MsgC( unpack(msg) )
-	MsgC("\n")
 end
 
 
@@ -385,6 +381,7 @@ hook.Add( "ChatText", "echat_joinleave", function( index, name, text, type )
 	if type == "joinleave" or type == "none" then
 		eChat.chatLog:InsertColorChange( 0, 128, 255, 255 )
 		eChat.chatLog:AppendText( text.."\n" )
+		eChat.lastMessage = CurTime()
 	end
 end)
 
@@ -420,69 +417,65 @@ end)
 --// Modify the Chatbox for align.
 local oldGetChatBoxPos = chat.GetChatBoxPos
 function chat.GetChatBoxPos()
-	local x = 30
-	local y = ScrH() - eChat.frame:GetTall() * 1.7
-	
-	return x,y
+	return eChat.frame:GetPos()
 end
-
 
 --// Overriding FPRP Stupid Chat System. The Glorious DarkRP Masterrace got it also working, to shine over the fprp peasants.
 local function override_darkrp()
---// Detouring the DarkRP Chat to use the old system
-local function AddToChat(bits)
-	local col1 = Color(net.ReadUInt(8), net.ReadUInt(8), net.ReadUInt(8))
+	--// Detouring the DarkRP Chat to use the old system
+	local function AddToChat(bits)
+		local col1 = Color(net.ReadUInt(8), net.ReadUInt(8), net.ReadUInt(8))
 
-	local prefixText = net.ReadString()
-	local ply = net.ReadEntity()
-	ply = IsValid(ply) and ply or LocalPlayer()
+		local prefixText = net.ReadString()
+		local ply = net.ReadEntity()
+		ply = IsValid(ply) and ply or LocalPlayer()
 
-	if prefixText == "" or not prefixText then
-		prefixText = ply:Nick()
-		prefixText = prefixText ~= "" and prefixText or ply:SteamName()
-	end
-
-	local col2 = Color(net.ReadUInt(8), net.ReadUInt(8), net.ReadUInt(8))
-
-	local text = net.ReadString()
-	local shouldShow
-	if text and text ~= "" then
-		if IsValid(ply) then
-			shouldShow = hook.Call("OnPlayerChat", GAMEMODE, ply, text, false, not ply:Alive(), prefixText, col1, col2)
+		if prefixText == "" or not prefixText then
+			prefixText = ply:Nick()
+			prefixText = prefixText ~= "" and prefixText or ply:SteamName()
 		end
 
-		if shouldShow ~= true then
-			chat.AddText(col1, prefixText, col2, ": "..text)
+		local col2 = Color(net.ReadUInt(8), net.ReadUInt(8), net.ReadUInt(8))
+
+		local text = net.ReadString()
+		local shouldShow
+		if text and text ~= "" then
+			if IsValid(ply) then
+				shouldShow = hook.Call("OnPlayerChat", GAMEMODE, ply, text, false, not ply:Alive(), prefixText, col1, col2)
+			end
+
+			if shouldShow ~= true then
+				chat.AddText(col1, prefixText, col2, ": "..text)
+			end
+		else
+			--shouldShow = hook.Call("ChatText", GAMEMODE, "0", prefixText, prefixText, "none")
+			--if shouldShow ~= true then
+				chat.AddText(col1, prefixText)
+			--end
 		end
-	else
-		--shouldShow = hook.Call("ChatText", GAMEMODE, "0", prefixText, prefixText, "none")
-		--if shouldShow ~= true then
-			chat.AddText(col1, prefixText)
-		--end
+		chat.PlaySound()
 	end
-	chat.PlaySound()
-end
 net.Receive("DarkRP_Chat", AddToChat)
---// Reverting the OnPlayerChat changes. Praise FPtje!
-function GAMEMODE:OnPlayerChat(ply, strText, bTeamOnly, bPlayerIsDead )
-	local tab = {}
-	if ( bPlayerIsDead ) then
-		table.insert( tab, Color( 255, 30, 40 ) )
-		table.insert( tab, "*DEAD* " )
+	--// Reverting the OnPlayerChat changes. Praise FPtje!
+	function GAMEMODE:OnPlayerChat(ply, strText, bTeamOnly, bPlayerIsDead )
+		local tab = {}
+		if ( bPlayerIsDead ) then
+			table.insert( tab, Color( 255, 30, 40 ) )
+			table.insert( tab, "*DEAD* " )
+		end
+		if ( bTeamOnly ) then
+			table.insert( tab, Color( 30, 160, 40 ) )
+			table.insert( tab, "(TEAM) " )
+		end
+		if ( IsValid( ply ) ) then
+			table.insert( tab, ply )
+		else
+			table.insert( tab, "Console" )
+		end
+		table.insert( tab, Color( 255, 255, 255 ) )
+		table.insert( tab, ": " .. strText )
+		chat.AddText( unpack(tab) )
+		return true
+		end
 	end
-	if ( bTeamOnly ) then
-		table.insert( tab, Color( 30, 160, 40 ) )
-		table.insert( tab, "(TEAM) " )
-	end
-	if ( IsValid( ply ) ) then
-		table.insert( tab, ply )
-	else
-		table.insert( tab, "Console" )
-	end
-	table.insert( tab, Color( 255, 255, 255 ) )
-	table.insert( tab, ": " .. strText )
-	chat.AddText( unpack(tab) )
-	return true
-	end
-end
-hook.Add("Initialize", "eChats_DerpRP_comp", override_darkrp)		
+hook.Add("Initialize", "eChats_DerpRP_comp", override_darkrp)
