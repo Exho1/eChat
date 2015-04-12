@@ -1,5 +1,5 @@
 ----// eChat //----
--- Author: Exho (obviously)
+-- Author: Exho (obviously), Tomelyr
 -- Version: 4/12/15
 
 if SERVER then
