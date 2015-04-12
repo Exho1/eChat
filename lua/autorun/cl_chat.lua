@@ -1,6 +1,6 @@
 ----// eChat //----
 -- Author: Exho (obviously)
--- Version: 4/8/14
+-- Version: 4/12/15
 
 if SERVER then
 	AddCSLuaFile()
@@ -94,9 +94,13 @@ function eChat.buildBox()
 			-- Replicate the client pressing enter
 			
 			if string.Trim( self:GetText() ) != "" then
-				gamemode.Call("OnPlayerChat", LocalPlayer(), self:GetText(), eChat.teamChat, !LocalPlayer():Alive())
-				--LocalPlayer():ConCommand("say "..self:GetText())
+				if eChat.teamChat then
+				LocalPlayer():ConCommand("say_team "..self:GetText())
+				else
+				LocalPlayer():ConCommand("say "..self:GetText())
+				end
 			end
+
 			
 			eChat.hideBox()
 		end
@@ -368,10 +372,7 @@ function chat.AddText(...)
 	
 	eChat.chatLog:SetVisible( true )
 	eChat.lastMessage = CurTime()
-
-	-- Print the chat message to console like the regular function
-	MsgC( unpack(msg) )
-	MsgC("\n")
+	oldAddText(unpack(msg))
 end
 
 --// Write any server notifications
@@ -414,5 +415,11 @@ hook.Add("HUDShouldDraw", "echat_hidedefault", function( name )
 		return false
 	end
 end)
+
+ --// Modify the Chatbox for align.
+local oldGetChatBoxPos = chat.GetChatBoxPos
+function chat.GetChatBoxPos()
+	return eChat.frame:GetPos()
+end
 
 
