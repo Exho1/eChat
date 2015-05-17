@@ -95,9 +95,9 @@ function eChat.buildBox()
 			
 			if string.Trim( self:GetText() ) != "" then
 				if eChat.teamChat then
-				LocalPlayer():ConCommand("say_team "..self:GetText())
+				LocalPlayer():ConCommand("say_team \"" .. self:GetText() .. "\"")
 				else
-				LocalPlayer():ConCommand("say "..self:GetText())
+				LocalPlayer():ConCommand("say \"" .. self:GetText() .. "\"")
 				end
 			end
 
