@@ -1,5 +1,5 @@
 ----// eChat //----
--- Author: Exho (obviously), Tomelyr
+-- Author: Exho (obviously), Tomelyr, LuaTenshi
 -- Version: 4/12/15
 
 if SERVER then
@@ -10,7 +10,8 @@ end
 eChat = {}
 
 eChat.config = {
-	timeStamps = true,	
+	timeStamps = true,
+	position = 1,	
 	fadeTime = 12,
 }
 
@@ -44,7 +45,7 @@ function eChat.buildBox()
 	eChat.frame:SetTitle("")
 	eChat.frame:ShowCloseButton( false )
 	eChat.frame:SetDraggable( false )
-	eChat.frame:SetPos( 30, ScrH() - eChat.frame:GetTall() * 1.7)
+	eChat.frame:SetPos( 10, (ScrH() - eChat.frame:GetTall()) - 20)
 	eChat.frame.Paint = function( self, w, h )
 		eChat.blur( self, 10, 20, 255 )
 		draw.RoundedBox( 0, 0, 0, w, h, Color( 30, 30, 30, 200 ) )
@@ -85,27 +86,50 @@ function eChat.buildBox()
 		draw.RoundedBox( 0, 0, 0, w, h, Color( 30, 30, 30, 100 ) )
 		derma.SkinHook( "Paint", "TextEntry", self, w, h )
 	end
+
+	eChat.entry.OnTextChanged = function( self )
+		if self and self.GetText then 
+			gamemode.Call( "ChatTextChanged", self:GetText() or "" )
+		end
+	end
+
 	eChat.entry.OnKeyCodeTyped = function( self, code )
+		local types = {"", "teamchat", "console"}
+
 		if code == KEY_ESCAPE then
-			-- Work around to hide the chatbox when the client press escape
+
 			eChat.hideBox()
 			gui.HideGameUI()
+
+		elseif code == KEY_TAB then
+			
+			eChat.TypeSelector = (eChat.TypeSelector and eChat.TypeSelector + 1) or 1
+			
+			if eChat.TypeSelector > 3 then eChat.TypeSelector = 1 end
+			if eChat.TypeSelector < 1 then eChat.TypeSelector = 3 end
+			
+			eChat.ChatType = types[eChat.TypeSelector]
+
+			timer.Simple(0.001, function() eChat.entry:RequestFocus() end)
+
 		elseif code == KEY_ENTER then
 			-- Replicate the client pressing enter
 			
 			if string.Trim( self:GetText() ) != "" then
-				if eChat.teamChat then
-				LocalPlayer():ConCommand("say_team \"" .. self:GetText() .. "\"")
+				if eChat.ChatType == types[2] then
+					LocalPlayer():ConCommand("say_team \"" .. (self:GetText() or "") .. "\"")
+				elseif eChat.ChatType == types[3] then
+					LocalPlayer():ConCommand(self:GetText() or "")
 				else
-				LocalPlayer():ConCommand("say \"" .. self:GetText() .. "\"")
+					LocalPlayer():ConCommand("say \"" .. self:GetText() .. "\"")
 				end
 			end
 
-			
+			eChat.TypeSelector = 1
 			eChat.hideBox()
 		end
 	end
-	
+
 	eChat.chatLog = vgui.Create("RichText", eChat.frame) 
 	eChat.chatLog:SetSize( eChat.frame:GetWide() - 10, eChat.frame:GetTall() - 60 )
 	eChat.chatLog:SetPos( 5, 30 )
@@ -135,28 +159,37 @@ function eChat.buildBox()
 	local w, h = surface.GetTextSize( text )
 	say:SetSize( w + 5, 20 )
 	say:SetPos( 5, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
+	
 	say.Paint = function( self, w, h )
 		draw.RoundedBox( 0, 0, 0, w, h, Color( 30, 30, 30, 100 ) )
 		draw.DrawText( text, "eChat_18", 2, 1, color_white )
 	end
+
 	say.Think = function( self )
-		if eChat.teamChat then 
-			text = "Say (TEAM) :"
-			local w, h = surface.GetTextSize( text )
-			self:SetSize( w + 5, 20 )
-			self:SetPos( 5, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
-			
-			eChat.entry:SetSize( eChat.frame:GetWide() - self:GetWide() - 15, 20 )
-			eChat.entry:SetPos( self:GetWide() + 10, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
+		local types = {"", "teamchat", "console"}
+		local s = {}
+
+		if eChat.ChatType == types[2] then 
+			text = "Say (TEAM) :"	
+		elseif eChat.ChatType == types[3] then
+			text = "Console :"
 		else
 			text = "Say :"
-			local w, h = surface.GetTextSize( text )
-			self:SetSize( w + 5, 20 )
-			self:SetPos( 5, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
-			
-			eChat.entry:SetSize( eChat.frame:GetWide() - 50, 20 )
-			eChat.entry:SetPos( 45, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
+			s.pw = 45
+			s.sw = eChat.frame:GetWide() - 50
 		end
+
+		if s then
+			if not s.pw then s.pw = self:GetWide() + 10 end
+			if not s.sw then s.sw = eChat.frame:GetWide() - self:GetWide() - 15 end
+		end
+
+		local w, h = surface.GetTextSize( text )
+		self:SetSize( w + 5, 20 )
+		self:SetPos( 5, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
+
+		eChat.entry:SetSize( s.sw, 20 )
+		eChat.entry:SetPos( s.pw, eChat.frame:GetTall() - eChat.entry:GetTall() - 5 )
 	end	
 	
 	eChat.hideBox()
@@ -389,14 +422,11 @@ end)
 
 --// Stops the default chat box from being opened
 hook.Add("PlayerBindPress", "echat_hijackbind", function(ply, bind, pressed)
-	local codeword = "messagemode"
-	
-	-- If the bind is "messagemode" or "messagemode2" then the client hit their chat key
-	if string.sub( bind, 1, string.len(codeword) ) == codeword then
+	if string.sub( bind, 1, 11 ) == "messagemode" then
 		if bind == "messagemode2" then 
-			eChat.teamChat = true
+			eChat.ChatType = "teamchat"
 		else
-			eChat.teamChat = false
+			eChat.ChatType = ""
 		end
 		
 		if IsValid( eChat.frame ) then
@@ -422,4 +452,16 @@ function chat.GetChatBoxPos()
 	return eChat.frame:GetPos()
 end
 
+function chat.GetChatBoxSize()
+	return eChat.frame:GetSize()
+end
 
+chat.Open = eChat.showBox
+function chat.Close(...) 
+	if IsValid( eChat.frame ) then 
+		eChat.hideBox(...)
+	else
+		eChat.buildBox()
+		eChat.showBox()
+	end
+end
