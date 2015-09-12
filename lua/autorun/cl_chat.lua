@@ -31,6 +31,7 @@ surface.CreateFont( "eChat_16", {
 
 --// Prevents errors if the script runs too early, which it will
 if not GAMEMODE then
+	hook.Remove("Initialize", "echat_init")
 	hook.Add("Initialize", "echat_init", function()
 		include("autorun/cl_chat.lua")
 		eChat.buildBox()
@@ -405,22 +406,27 @@ function chat.AddText(...)
 	
 	eChat.chatLog:SetVisible( true )
 	eChat.lastMessage = CurTime()
-	oldAddText(unpack(msg))
+--	oldAddText(unpack(msg))
 end
 
 --// Write any server notifications
+hook.Remove( "ChatText", "echat_joinleave")
 hook.Add( "ChatText", "echat_joinleave", function( index, name, text, type )
 	if not eChat.chatLog then
 		eChat.buildBox()
 	end
 	
-	if type == "joinleave" or type == "none" then
+	if type != "chat" then
 		eChat.chatLog:InsertColorChange( 0, 128, 255, 255 )
 		eChat.chatLog:AppendText( text.."\n" )
+		eChat.chatLog:SetVisible( true )
+		eChat.lastMessage = CurTime()
+		return true
 	end
 end)
 
 --// Stops the default chat box from being opened
+hook.Remove("PlayerBindPress", "echat_hijackbind")
 hook.Add("PlayerBindPress", "echat_hijackbind", function(ply, bind, pressed)
 	if string.sub( bind, 1, 11 ) == "messagemode" then
 		if bind == "messagemode2" then 
@@ -440,6 +446,7 @@ hook.Add("PlayerBindPress", "echat_hijackbind", function(ply, bind, pressed)
 end)
 
 --// Hide the default chat too in case that pops up
+hook.Remove("HUDShouldDraw", "echat_hidedefault")
 hook.Add("HUDShouldDraw", "echat_hidedefault", function( name )
 	if name == "CHudChat" then
 		return false
