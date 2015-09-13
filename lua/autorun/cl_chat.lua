@@ -20,6 +20,7 @@ surface.CreateFont( "eChat_18", {
 	size = 18,
 	weight = 500,
 	antialias = true,
+	shadow = true,
 } )
 
 surface.CreateFont( "eChat_16", {
@@ -27,6 +28,7 @@ surface.CreateFont( "eChat_16", {
 	size = 16,
 	weight = 500,
 	antialias = true,
+	shadow = true,
 } )
 
 --// Prevents errors if the script runs too early, which it will
@@ -45,8 +47,11 @@ function eChat.buildBox()
 	eChat.frame:SetSize( 625, 300 )
 	eChat.frame:SetTitle("")
 	eChat.frame:ShowCloseButton( false )
-	eChat.frame:SetDraggable( false )
+	eChat.frame:SetDraggable( true )
+	eChat.frame:SetSizable( true )
 	eChat.frame:SetPos( 10, (ScrH() - eChat.frame:GetTall()) - 20)
+	eChat.frame:SetMinWidth( 300 )
+	eChat.frame:SetMinHeight( 100 )
 	eChat.frame.Paint = function( self, w, h )
 		eChat.blur( self, 10, 20, 255 )
 		draw.RoundedBox( 0, 0, 0, w, h, Color( 30, 30, 30, 200 ) )
@@ -56,7 +61,7 @@ function eChat.buildBox()
 	eChat.oldPaint = eChat.frame.Paint
 	
 	local serverName = vgui.Create("DLabel", eChat.frame)
-	serverName:SetText( GetConVarString( "hostname" ) )
+	serverName:SetText( GetHostName() )
 	serverName:SetFont( "eChat_18")
 	serverName:SizeToContents()
 	serverName:SetPos( 5, 4 )
@@ -145,6 +150,8 @@ function eChat.buildBox()
 				self:SetVisible( true )
 			end
 		end
+		self:SetSize( eChat.frame:GetWide() - 10, eChat.frame:GetTall() - eChat.entry:GetTall() - serverName:GetTall() - 20 )
+		settings:SetPos( eChat.frame:GetWide() - settings:GetWide(), 0 )
 	end
 	eChat.chatLog.PerformLayout = function( self )
 		self:SetFontInternal("eChat_18")
@@ -406,6 +413,7 @@ function chat.AddText(...)
 	
 	eChat.chatLog:SetVisible( true )
 	eChat.lastMessage = CurTime()
+	eChat.chatLog:InsertColorChange( 255, 255, 255, 255 )
 --	oldAddText(unpack(msg))
 end
 
