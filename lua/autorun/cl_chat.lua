@@ -54,6 +54,11 @@ function eChat.buildBox()
 		draw.RoundedBox( 0, 0, 0, w, 25, Color( 80, 80, 80, 100 ) )
 	end
 	eChat.oldPaint = eChat.frame.Paint
+	eChat.frame.Think = function()
+		if input.IsKeyDown( KEY_ESCAPE ) then
+			eChat.hideBox()
+		end
+	end
 	
 	local serverName = vgui.Create("DLabel", eChat.frame)
 	serverName:SetText( GetConVarString( "hostname" ) )
