@@ -21,6 +21,7 @@ surface.CreateFont( "eChat_18", {
 	weight = 500,
 	antialias = true,
 	shadow = true,
+	extended = true,
 } )
 
 surface.CreateFont( "eChat_16", {
@@ -29,6 +30,7 @@ surface.CreateFont( "eChat_16", {
 	weight = 500,
 	antialias = true,
 	shadow = true,
+	extended = true,
 } )
 
 --// Prevents errors if the script runs too early, which it will
